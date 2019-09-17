@@ -1,0 +1,172 @@
+syntax = "proto3";
+
+package msgcmdproto;
+
+enum ErrCode{
+    EXCEPT_ERR									= 0;
+    NON_ERR											= 0x8000;							//无错，成功。
+    ERR_SYS_REGIST      				= 0x8001;            				//关联网间注册错
+    ERR_LOGIN_AUTH							= 0x8101;							//移动端登录失败时，返回的错误码
+    ERR_LOGIN_FORBIDDEN					= 0x8102;							//移动端登录参数错，返回禁止登录码
+    ERR_LOGOUT									= 0x8103;							//移动端登出失败时，返回的错误码
+    ERR_DEVICESYNC_PARAMETER 		= 0x8104;							//设备信息参数错
+    ERR_DEVICESYNC_FORBIDDEN 		= 0x8105;							//设备信息禁止同步，一般因相对应的用户不在线，或参数错。
+    ERR_DEVICESYNC_EXCEPTION 		= 0x8106;							//设备信息禁止同步，一般因网络问题操作内部网元失败
+    ERR_TRANSMISSION_FORBIDDEN  = 0x8107;							//消息接入禁止，一般因设备登录鉴权错
+    ERR_TRANSMISSION_SESSION	  = 0x8108;							//消息接入中转会话失败，一般因填错sessionid 或没填sessionid
+    ERR_CM_EXCEPTION						= 0x8109;							//接入服务内部网络异常，如redis连接失败等
+    ERR_CM_AUTH_KICKEDOUT         = 0X8110;                         //移动端登录时，token因kickout而超时返回的错误码
+    ////////////CHAT SVR/////////////////
+    //		ERR_CHAT_COMM_SUCCESS		= 0x8200;							//消息发送成功， 好友添加成功等,使用通用的0x8000 NON_ERR
+    ERR_CHAT_FORBIDDEN			= 0x8201;							//无聊天权限(双方不是好友)
+    ERR_CHAT_UNHEALTHY			= 0x8202;							//不良聊天信息
+    ERR_CHAT_PARAMETER			= 0x8203;							//消息参数错误
+
+    ERR_CHAT_CANCEL_OUTTIME		= 0x8204;							//消息撤回已超出时间限制
+
+    ERR_CHAT_FRIEND_REFUSE		= 0x8211;							//拒绝添加为好友
+    ERR_CHAT_FRIEND_BLOCK		= 0x8212;							//已经被拉黑
+    ERR_CHAT_FRIEND_DEL			= 0x8213;							//已经被删除
+    ERR_CHAT_FRIEND_ADDED		= 0x8214;							//已经是好友(正常模式)
+    ERR_CHAT_FRIEND_ADDING		= 0x8215;							//已申请添加，等待对方验证
+
+    ERR_CHAT_FRIEND_HIDENADDED 	= 0x8216;							//已经是好友(隐藏模式)
+
+
+    ERR_CHAT_DEENCRY_FAILED		= 0x8223;							//解密失败
+
+    INFO_GROUP_PENDING				= 0x8300;							//群组业务处理中
+    ERR_GROUP_PARAMETER			  = 0x8301;							//参数填错
+    ERR_GROUP_OVERCREATION		= 0x8302;							//超过建群总数限制，
+    ERR_GROUP_OVERJOIN				= 0x8303;							//超过群成员限制
+    ERR_GROUP_NETWORKEXCEPTION= 0x8304;							//群组业务网络异常错误（总称）
+    ERR_GROUP_FORBIDDEN				= 0x8305;							//用户没有权限，返回禁止操作码
+    ERR_GROUP_INTEREXCEPTION  = 0x8306;							//建立群组时内部信息处理异常。
+    ERR_GROUP_MEMBEREXIST			= 0x8307;							//群成员已存在(正常模式)
+    ERR_GROUP_MEMBERNONEXIST  = 0x8308;							//群成员不存在；
+    ERR_GROUP_INTERPERMISSION = 0x8309;							//需要内部同意确认；
+    ERR_GROUP_NONPERMISSION 	= 0x8310;							//无需内部同意确认；
+    ERR_GROUP_MASTER					= 0x8311;							//群主身份
+    ERR_GROUP_NOTMASTER				= 0x8312;							//非群主身份
+    ERR_GROUP_INVITEEXCEPTION = 0x8313;							//服务器内部发起邀请异常
+    ERR_GROUP_INVITESUCCESS 	= 0x8314;							//服务器内部发起邀请部分成功（指不需要对方确认的部分）
+
+    ERR_GROUP_DISMISSED			= 0x8315;						// 群已解散或不存在
+
+    ERR_GROUP_MEMBEREXIST_HIDE			= 0x8316;				//群成员已存在(隐藏模式)
+
+
+    ERR_GROUP_JOIN_REJECT			= 0x8320;							//群邀请拒绝的应答。
+    ERR_GROUP_NOTIFY_REJECT 	= 0x8321;							//通知发起方， 邀请拒绝。
+    ERR_GROUP_MASTER_QUIT				= 0x8322;						//群主退群失败，请转让群主后再退群
+
+    //通话被接受使用NON_ERROR
+    ERR_CALL_REFUSE				= 0x8400;							// 通话被拒绝,
+    ERR_CALL_BUSY				= 0x8401;							// 通话忙
+    ERR_CALL_PEER_OFFLINE		= 0x8402;							// 对端不在线
+
+}
+
+////////////////////////////////////////////////////////////////////////
+//CM_LOGIN ： 0xa001
+////////////////////////////////////////////////////////////////////////
+message CMLogin{
+    string 	sUserId 		= 1;						// telephone number or any other number binded.
+    string 	sUserToken 		= 2;				    	// 用户登录IM时需提供用户中心产生的token信息
+    uint32  nDeviceType 	= 6;						// 设备类型码
+    string  sDeviceVersion 	= 7;						// IOS设备版本信息, APNS推送通知时需要。
+    string  sDeviceToken 	= 8;						// IOS设备token信息，APNS推送通知时需要。
+    string  sDeviceVoipToken= 9;						// IOS设备token信息，Voip推送通知时需要。
+    string  sAppVersion		=10;						// 版本号
+}
+
+message CMLoginAck{
+    string sUserId        = 1;
+    ErrCode  nErr         = 2;// 登录失败返回的错误码，无错返回200.
+    uint64 nLastLoginTime = 3;// 当nErr=ERR_CM_AUTH_KICKEDOUT时,返回的最后登录时间
+}
+
+message CMLoginV1{
+     string  sUserId         = 1;                        // telephone number or any other number binded.
+     string  sLoginToken     = 2;                        // 用户登录IM时需提供用户中心产生的token信息
+     string  sDeviceToken    = 3;                        // 设备唯一标识
+     uint32  nPushType       = 4;                        // 推送类型
+     string  sPushToken      = 5;                        // 推送token
+     string  sVersionCode    = 6;                        // 当前app的版本号
+}
+
+message CMLoginV1Ack{
+    string sUserId          = 1;
+    ErrCode  nErr           = 2;                        // 登录失败返回的错误码，无错返回200.
+    uint64 nLastLoginTime   = 3;                        // 当nErr=ERR_CM_AUTH_KICKEDOUT时,返回的最后登录时间
+    }
+
+  //MES_CHAT ： 0xb001                移动发送端发聊天消息给MES消息服务器
+  ////////////////////////////////////////////////////////////////////////
+  message MESChat
+  {
+      string  sFromId             = 1;  // telephone number or any other number binded.
+      string  sToId               = 2;  // telephone number or any other number binded.
+      string  sMsgId              = 3;  // Generated uuid by APP Id;
+      uint32  msgType             = 4;  // 1: P2P chat normal; 2: P2P chat with burning after read;
+                                        // 3: p2p hide ; 4: p2p hide with burning after read;
+                                        // 5: Group chat; 6: Group with burning after read;
+                                        // 7: Group hide; 8: Group with burning after read;
+                                        // 9: add friend 10:customer msg,In case sToId is serviceId
+      uint64  msgTime             = 5;  //server time,precision millisecond
+      uint32  encrypt             = 6;  // whether encrypt chat contents
+      string  sContent            = 7;  //chat contents
+      string  extend              = 10;  // 扩展字段
+  }
+
+  ////////////////////////////////////////////////////////////////////////
+  //MES_CHAT_ACK ： 0xb002            MES消息服务器回应移动发送端聊天消息
+  ////////////////////////////////////////////////////////////////////////
+  message MESChatAck
+  {
+      string  sUserId             = 1; // telephone number or any other number binded. point to sFromId,tell cmSvr which client send to
+      string  sMsgId              = 2; // uuid , to identify unique message.
+      uint64  sendtime            = 3; // server time,precision millisecond,user can use to sort the message.
+      ErrCode errcode             = 4; // return 200 if no error.
+  }
+
+  ////////////////////////////////////////////////////////////////////////
+  //MES_CHAT_DELIVER_ACK ： 0xb003        移动接收端回应MES消息服务器消息送达
+  ////////////////////////////////////////////////////////////////////////
+
+  message MESChatDeliveredAck
+  {
+      string  sFromId             = 1;  // telephone number or any other number binded.
+      string  sToId               = 2;  // telephone number or any other number binded.
+      string  sMsgId              = 3; //
+  }
+
+  ////////////////////////////////////////////////////////////////////////
+  //MES_CHAT_DELIVER   ： 0xb004      MES消息服务器中转聊天消息给移动接收端
+  ////////////////////////////////////////////////////////////////////////
+  //share with MESChat message structure;
+
+  ////////////////////////////////////////////////////////////////////////
+  //MES_CHAT_DELIVERED_NOTIFICATION_ACK ： 0xb005             移动发送端接收MES消息服务器消息已送达通知确认,
+  ////////////////////////////////////////////////////////////////////////
+  message MESChatDeliveredNotificationAck
+  {
+      string sUserId              = 1;        //required，消息的发送方
+      string sMsgId               = 2;        //required
+  }
+
+  ////////////////////////////////////////////////////////////////////////
+  //MES_CHAT_DELIVERED_NOTIFICATION ： 0xb006 MES消息服务器通知移动发送端消息已送达,
+  ////////////////////////////////////////////////////////////////////////
+  //share with MESChatDeliveredAck message structure;
+
+message SYSAssocSvrRegist{
+        string  ip            = 1;                 //服务从机IP
+        uint32  port          = 2;                 //服务从机端口
+}
+
+message SYSAssocSvrRegistAck {
+        ErrCode nErr          = 1;             	  //注册错误码
+}
+
+
