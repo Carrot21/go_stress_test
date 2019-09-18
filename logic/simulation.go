@@ -22,8 +22,6 @@ func ConnTCPserver() net.Conn {
 		os.Exit(1)
 	}
 
-	//seelog.Info(conn.RemoteAddr().String(), " connection succcess!")
-
 	return conn
 }
 
@@ -34,9 +32,10 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults) {
 		wg.Add(1)
 
 		go func(i int, ch chan<- *entity.ResponseResults) {
-			defer wg.Done()
-
 			conn := ConnTCPserver()
+
+			defer wg.Done()
+			defer conn.Close()
 
 			msgHead := &entity.Header{
 				NPID:      binary.LittleEndian.Uint16([]byte{'U', 'S'}),
@@ -48,12 +47,12 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults) {
 			}
 
 			msgBody := msgcmdproto.CMLoginV1{
-				SUserId:      csvSlice[i][0],  // string
-				SLoginToken:  csvSlice[i][1],  // string
-				SDeviceToken: "tokeninfotest", // string
-				NPushType:    254,             // uint32   `protobuf:"varint,
-				SPushToken:   "",              //result.Person[i].Push_token,// string
-				SVersionCode: "2.3.0",         // string
+				SUserId:      csvSlice[i][0],
+				SLoginToken:  csvSlice[i][1],
+				SDeviceToken: "tokeninfotest",
+				NPushType:    254,
+				SPushToken:   "",
+				SVersionCode: "2.3.0",
 			}
 
 			seelog.Info(msgBody)
@@ -73,7 +72,6 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults) {
 				isSucceed = true
 			)
 
-			//conn := conns[i]
 			if _, err := conn.Write(sendData); err != nil {
 				isSucceed = false
 
@@ -102,11 +100,8 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults) {
 				seelog.Infof("user %s login error , errorcode = %d\n", loginAck.GetSUserId(), loginAck.GetNErr())
 			}
 
-			//copy(result.Person[i].SessionId[:], recvData[3:15])
 			seelog.Infof("user %s login at %d , status = %d\n",
 				loginAck.GetSUserId(), loginAck.GetNLastLoginTime(), loginAck.GetNErr())
-			//seelog.Info("sessionid: ", result.Person[i].SessionId)
-			//conns = append(conns, conn)
 
 			responseResults := &entity.ResponseResults{
 				Time:      spentTime,
@@ -132,45 +127,60 @@ func DiffNano(startTime time.Time) (diff int64) {
 }
 
 //发心跳包的
-func SimulateHeartBeat(csvSlice [][]string) {
+func SimulateHeartBeat(csvSlice [][]string, onLineTime int) {
 	var wg sync.WaitGroup
 
 	for i := 0; i < len(csvSlice); i++ {
 		wg.Add(1)
-		n := 0
 		go func() {
+			conn := ConnTCPserver()
+
 			defer wg.Done()
+			defer conn.Close()
+
+			ticker := time.NewTicker(time.Duration(onLineTime) * time.Minute)
 
 			for {
-
-				conn := ConnTCPserver()
-
-				data := []byte{'U', 'S'}
-
-				msgHead := &entity.Header{
-					NPID:      binary.LittleEndian.Uint16(data),
-					NVersion:  2,
-					SessionId: [12]byte{},
-					BEncrypt:  0,
-					NCmdId:    0xa001,
-					NBodySize: 0,
+				select {
+				case <-ticker.C:
+					ticker.Stop()
+					return
+				default:
+					sendHeartBeat(conn)
 				}
-				// 对数据进行序列化
-				sendData := util.StructToByte(msgHead)
-				//conn := conns[i]
-				wLen, err := conn.Write(sendData)
-				if err != nil {
-					seelog.Info("Write Data Error: ", error(err))
-				}
-
-				seelog.Infof("Write data to %s, len = %d\n", conn.RemoteAddr(), wLen)
-
-				time.Sleep(time.Duration(config.GetConfig().HeartBeat) * time.Second)
-				n++
-				println(n)
 			}
 		}()
 	}
 
 	wg.Wait()
+}
+
+//var n uint32
+
+func sendHeartBeat(conn net.Conn) {
+	data := []byte{'U', 'S'}
+
+	msgHead := &entity.Header{
+		NPID:      binary.LittleEndian.Uint16(data),
+		NVersion:  2,
+		SessionId: [12]byte{},
+		BEncrypt:  0,
+		NCmdId:    0xa001,
+		NBodySize: 0,
+	}
+
+	// 对数据进行序列化
+	sendData := util.StructToByte(msgHead)
+
+	wLen, err := conn.Write(sendData)
+	if err != nil {
+		seelog.Info("Write Data Error: ", error(err))
+	}
+
+	seelog.Infof("Write data to %s, len = %d\n", conn.RemoteAddr(), wLen)
+
+	time.Sleep(time.Duration(config.GetConfig().HeartBeat) * time.Second)
+
+	//atomic.AddUint32(&n, 1)
+	//println(n)
 }
