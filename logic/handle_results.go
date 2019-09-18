@@ -1,12 +1,16 @@
 package logic
 
 import (
+	"encoding/csv"
 	"fmt"
 	"go_stress_test/entity"
+	"log"
+	"os"
+	"strconv"
 	"time"
 )
 
-func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults) {
+func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults, isGenFile bool) {
 	var (
 		processingTime uint64 // 处理总时间
 		maxTime        uint64 // 最大时长
@@ -21,7 +25,7 @@ func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults) 
 	go func() {
 		select {
 		case <-ticker.C:
-			go calculateData(uint64(len(csvSlice)), processingTime, maxTime, minTime, successNum, failureNum)
+			go calculateData(uint64(len(csvSlice)), processingTime, maxTime, minTime, successNum, failureNum, isGenFile)
 			ticker.Stop()
 		}
 	}()
@@ -51,12 +55,13 @@ func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults) 
 		}
 	}
 
-	//calculateData(uint64(len(csvSlice)), processingTime, maxTime, minTime, successNum, failureNum, errCode)
+	//calculateData(uint64(len(csvSlice)), processingTime, maxTime, minTime, successNum, failureNum)
 }
 
 // 打印表头信息
 func header() {
-	// 打印的时长都为毫秒 总请数
+	// 打印的时长都为毫秒
+	println("开始压测，请耐心等待！马上输出结果！")
 	fmt.Println("───────┬───────┬───────┬────────┬────────┬────────┬────────")
 	result := fmt.Sprintf(" 并发数│ 成功数│ 失败数│   QPS  │最长耗时│最短耗时│平均耗时")
 	fmt.Println(result)
@@ -66,7 +71,7 @@ func header() {
 }
 
 // 计算数据
-func calculateData(concurrent, processingTime, maxTime, minTime, successNum, failureNum uint64) {
+func calculateData(concurrent, processingTime, maxTime, minTime, successNum, failureNum uint64, isGenFile bool) {
 	if processingTime == 0 {
 		processingTime = 1
 	}
@@ -94,6 +99,10 @@ func calculateData(concurrent, processingTime, maxTime, minTime, successNum, fai
 
 	// 打印的时长都为毫秒
 	table(successNum, failureNum, qps, averageTime, maxTimeFloat, minTimeFloat, concurrent)
+
+	if isGenFile {
+		generateCSVFile(successNum, failureNum, qps, averageTime, maxTimeFloat, minTimeFloat, concurrent)
+	}
 }
 
 // 打印表格
@@ -103,4 +112,53 @@ func table(successNum, failureNum uint64, qps, averageTime, maxTimeFloat, minTim
 	fmt.Println(result)
 
 	return
+}
+
+func generateCSVFile(successNum, failureNum uint64, qps, averageTime, maxTimeFloat, minTimeFloat float64, concurrentNum uint64) {
+	format := "2006-01-02.15.04"
+
+	timeStr := fmt.Sprintf("%s", time.Now().Format(format))
+
+	File := "stressTest." + timeStr + ".csv"
+
+	newFile, err := os.Create(File)
+	if err != nil {
+		log.Fatalln("ERR:", err)
+	}
+
+	defer func() {
+		newFile.Close()
+	}()
+
+	newFile.WriteString("\xEF\xBB\xBF")
+
+	w := csv.NewWriter(newFile)
+	header := []string{"并发数", "成功数", "失败数", "QPS", "最长耗时", "最短耗时", "平均耗时"}
+	data := [][]string{
+		header,
+	}
+
+	successNumStr := intToStr(successNum)
+	failureNumStr := intToStr(failureNum)
+	concurrentNumStr := intToStr(concurrentNum)
+
+	qpsStr := floatToStr(qps)
+	averageTimeStr := floatToStr(averageTime)
+	maxTimeFloatStr := floatToStr(maxTimeFloat)
+	minTimeFloatStr := floatToStr(minTimeFloat)
+
+	content := []string{concurrentNumStr, successNumStr, failureNumStr, qpsStr, maxTimeFloatStr, minTimeFloatStr, averageTimeStr}
+
+	data = append(data, content)
+
+	w.WriteAll(data)
+	w.Flush()
+}
+
+func intToStr(num uint64) string {
+	return strconv.FormatUint(num, 10)
+}
+
+func floatToStr(num float64) string {
+	return strconv.FormatFloat(num, 'f', 2, 64)
 }

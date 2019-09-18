@@ -12,6 +12,7 @@ import (
 var (
 	confFile = flag.String("confFile", "config/go_stress_test.yml", "Configuration file")
 	csvFile  = flag.String("csvFile", "", "请输入csv格式的文件，如./go_stress_test -csvFile=xxx.csv")
+	IsGenerateFile = flag.Bool("genFile",false,"若要生成压力测试文件，则在命令行上添加-genFile=true，默认不生成")
 )
 
 func main() {
@@ -33,7 +34,7 @@ func main() {
 
 	logic.SimulateLogin(csvSlice, ch)
 
-	logic.HandleReponseResults(csvSlice,ch)
+	logic.HandleReponseResults(csvSlice,ch,*IsGenerateFile)
 
 	//发心跳包的
 	logic.SimulateHeartBeat(csvSlice)
