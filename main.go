@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/cihub/seelog"
 	"go_stress_test/config"
+	"go_stress_test/entity"
 	"go_stress_test/logic"
 	"log"
 )
@@ -16,6 +17,8 @@ var (
 func main() {
 	InitLog()
 
+	ch := make(chan *entity.ResponseResults, 10000)
+
 	flag.Parse()
 
 	if *csvFile == "" {
@@ -27,7 +30,9 @@ func main() {
 
 	csvSlice := logic.ParseCSVFile(*csvFile)
 
-	logic.SimulateLogin(csvSlice)
+	logic.SimulateLogin(csvSlice, ch)
+
+	logic.HandleReponseResults(csvSlice,ch)
 
 	//发心跳包的
 	logic.SimulateHeartBeat(csvSlice)
@@ -38,13 +43,13 @@ func main() {
 	//}
 }
 
-func InitLog(){
+func InitLog() {
 	defer seelog.Flush()
 
 	//加载配置文件
 	logger, err := seelog.LoggerFromConfigAsFile("config/log_config.xml")
 
-	if err!=nil{
+	if err != nil {
 		panic("parse log_config.xml error")
 	}
 

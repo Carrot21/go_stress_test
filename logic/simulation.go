@@ -28,13 +28,13 @@ func ConnTCPserver() net.Conn {
 	return conn
 }
 
-func SimulateLogin(csvSlice [][]string) {
+func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults) {
 	var wg sync.WaitGroup
 
 	for i := 0; i < len(csvSlice); i++ {
 		wg.Add(1)
 
-		go func(i int) {
+		go func(i int, ch chan<- *entity.ResponseResults) {
 			defer wg.Done()
 
 			conn := ConnTCPserver()
@@ -69,15 +69,28 @@ func SimulateLogin(csvSlice [][]string) {
 			sendData := util.StructToByte(msgHead)
 			sendData = append(sendData, msgBodyProto...)
 
+			var (
+				startTime = time.Now()
+				isSucceed = true
+				errCode   = msgcmdproto.ErrCode_NON_ERR
+			)
+
 			//conn := conns[i]
 			if _, err := conn.Write(sendData); err != nil {
+				isSucceed = false
+
 				seelog.Error("Write CM Server Failed:", err)
 			}
 
 			//read ack data
 			recvData := make([]byte, 1024)
 			reqLen, err := conn.Read(recvData)
+
+			spentTime := uint64(DiffNano(startTime))
+
 			if err != nil {
+				isSucceed = false
+
 				seelog.Info("Error to read message", err.Error())
 			}
 
@@ -88,6 +101,8 @@ func SimulateLogin(csvSlice [][]string) {
 			proto.Unmarshal(recvData[20:], &loginAck)
 
 			if loginAck.NErr != msgcmdproto.ErrCode_NON_ERR {
+				errCode = loginAck.NErr
+
 				seelog.Infof("user %s login error , errorcode = %d\n", loginAck.GetSUserId(), loginAck.GetNErr())
 			}
 
@@ -96,10 +111,29 @@ func SimulateLogin(csvSlice [][]string) {
 				loginAck.GetSUserId(), loginAck.GetNLastLoginTime(), loginAck.GetNErr())
 			//seelog.Info("sessionid: ", result.Person[i].SessionId)
 			//conns = append(conns, conn)
-		}(i)
+
+			responseResults := &entity.ResponseResults{
+				Time:      spentTime,
+				IsSucceed: isSucceed,
+				ErrCode:   errCode,
+			}
+
+			ch <- responseResults
+		}(i, ch)
 	}
 
 	wg.Wait()
+}
+
+// 时间差，纳秒
+func DiffNano(startTime time.Time) (diff int64) {
+
+	startTimeStamp := startTime.UnixNano()
+	endTimeStamp := time.Now().UnixNano()
+
+	diff = endTimeStamp - startTimeStamp
+
+	return
 }
 
 //发心跳包的
