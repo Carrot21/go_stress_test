@@ -54,18 +54,16 @@ func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults, 
 			failureNum = failureNum + 1
 		}
 	}
-
-	//calculateData(uint64(len(csvSlice)), processingTime, maxTime, minTime, successNum, failureNum)
 }
 
 // 打印表头信息
 func header() {
 	// 打印的时长都为毫秒
-	println("开始压测，请耐心等待！马上输出结果！")
-	fmt.Println("───────┬───────┬───────┬────────┬────────┬────────┬────────")
-	result := fmt.Sprintf(" 并发数│ 成功数│ 失败数│   QPS  │最长耗时│最短耗时│平均耗时")
+	println("  		开始压测，请耐心等待见证奇迹的时刻！")
+	fmt.Println("───────┬───────┬───────┬────────┬────────┬────────┬────────┬────────")
+	result := fmt.Sprintf(" 并发数│ 成功数│ 失败数│   QPS  │最长耗时│最短耗时│平均耗时│总耗时")
 	fmt.Println(result)
-	fmt.Println("───────┼───────┼───────┼────────┼────────┼────────┼────────")
+	fmt.Println("───────┼───────┼───────┼────────┼────────┼────────┼────────┼────────")
 
 	return
 }
@@ -88,33 +86,36 @@ func calculateData(concurrent, processingTime, maxTime, minTime, successNum, fai
 		qps = float64(successNum*1e9*concurrent) / float64(processingTime)
 	}
 
-	// 平均时长 总耗时/总请求数/并发数 纳秒=>毫秒
+	// 平均时长 总耗时/总请求数 纳秒=>毫秒
 	if successNum != 0 && concurrent != 0 {
-		averageTime = float64(processingTime) / float64(successNum*1e6*concurrent)
+		averageTime = float64(processingTime) / float64(1e6*concurrent)
 	}
 
 	// 纳秒=>毫秒
 	maxTimeFloat = float64(maxTime) / 1e6
 	minTimeFloat = float64(minTime) / 1e6
 
+	//总耗时(纳秒)
+	processingTimeNa := float64(processingTime) / 1e6
+
 	// 打印的时长都为毫秒
-	table(successNum, failureNum, qps, averageTime, maxTimeFloat, minTimeFloat, concurrent)
+	table(successNum, failureNum, qps, averageTime, maxTimeFloat, minTimeFloat, processingTimeNa, concurrent)
 
 	if isGenFile {
-		generateCSVFile(successNum, failureNum, qps, averageTime, maxTimeFloat, minTimeFloat, concurrent)
+		generateCSVFile(successNum, failureNum, qps, averageTime, maxTimeFloat, minTimeFloat, processingTimeNa, concurrent)
 	}
 }
 
 // 打印表格
-func table(successNum, failureNum uint64, qps, averageTime, maxTimeFloat, minTimeFloat float64, concurrentNum uint64) {
+func table(successNum, failureNum uint64, qps, averageTime, maxTimeFloat, minTimeFloat, processTimeFloat float64, concurrentNum uint64) {
 	// 打印的时长都为毫秒
-	result := fmt.Sprintf("%7d│%7d│%7d│%8.2f│%8.2f│%8.2f│%8.2f", concurrentNum, successNum, failureNum, qps, maxTimeFloat, minTimeFloat, averageTime)
+	result := fmt.Sprintf("%7d│%7d│%7d│%8.2f│%8.2f│%8.2f│%8.2f│%8.2f", concurrentNum, successNum, failureNum, qps, maxTimeFloat, minTimeFloat, averageTime, processTimeFloat)
 	fmt.Println(result)
 
 	return
 }
 
-func generateCSVFile(successNum, failureNum uint64, qps, averageTime, maxTimeFloat, minTimeFloat float64, concurrentNum uint64) {
+func generateCSVFile(successNum, failureNum uint64, qps, averageTime, maxTimeFloat, minTimeFloat, processingTimeNa float64, concurrentNum uint64) {
 	format := "2006-01-02.15.04"
 
 	timeStr := fmt.Sprintf("%s", time.Now().Format(format))
@@ -133,7 +134,7 @@ func generateCSVFile(successNum, failureNum uint64, qps, averageTime, maxTimeFlo
 	newFile.WriteString("\xEF\xBB\xBF")
 
 	w := csv.NewWriter(newFile)
-	header := []string{"并发数", "成功数", "失败数", "QPS", "最长耗时", "最短耗时", "平均耗时"}
+	header := []string{"并发数", "成功数", "失败数", "QPS", "最长耗时", "最短耗时", "平均耗时", "总耗时"}
 	data := [][]string{
 		header,
 	}
@@ -146,8 +147,9 @@ func generateCSVFile(successNum, failureNum uint64, qps, averageTime, maxTimeFlo
 	averageTimeStr := floatToStr(averageTime)
 	maxTimeFloatStr := floatToStr(maxTimeFloat)
 	minTimeFloatStr := floatToStr(minTimeFloat)
+	processingTimeStr := floatToStr(processingTimeNa)
 
-	content := []string{concurrentNumStr, successNumStr, failureNumStr, qpsStr, maxTimeFloatStr, minTimeFloatStr, averageTimeStr}
+	content := []string{concurrentNumStr, successNumStr, failureNumStr, qpsStr, maxTimeFloatStr, minTimeFloatStr, averageTimeStr, processingTimeStr}
 
 	data = append(data, content)
 
