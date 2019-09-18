@@ -72,7 +72,6 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults) {
 			var (
 				startTime = time.Now()
 				isSucceed = true
-				errCode   = msgcmdproto.ErrCode_NON_ERR
 			)
 
 			//conn := conns[i]
@@ -101,8 +100,6 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults) {
 			proto.Unmarshal(recvData[20:], &loginAck)
 
 			if loginAck.NErr != msgcmdproto.ErrCode_NON_ERR {
-				errCode = loginAck.NErr
-
 				seelog.Infof("user %s login error , errorcode = %d\n", loginAck.GetSUserId(), loginAck.GetNErr())
 			}
 
@@ -115,7 +112,6 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults) {
 			responseResults := &entity.ResponseResults{
 				Time:      spentTime,
 				IsSucceed: isSucceed,
-				ErrCode:   errCode,
 			}
 
 			ch <- responseResults

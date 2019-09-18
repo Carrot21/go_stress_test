@@ -1,7 +1,5 @@
 package entity
 
-import msgcmdproto "go_stress_test/proto"
-
 type MsgHeader struct {
 	Flags uint16		//协议标识:0x535a5951 "SZYQ"  判断到消息类型
 	Length uint16 		//消息体长度
@@ -39,5 +37,4 @@ type UserInfo struct {
 type ResponseResults struct {
 	Time      uint64 // 请求时间 纳秒
 	IsSucceed bool   // 是否请求成功
-	ErrCode   msgcmdproto.ErrCode    // 错误码
 }
