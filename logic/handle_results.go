@@ -5,6 +5,7 @@ import (
 	"go_stress_test/entity"
 	msgcmdproto "go_stress_test/proto"
 	"strings"
+	"time"
 )
 
 func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults) {
@@ -17,7 +18,20 @@ func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults) 
 		errCode        = make(map[msgcmdproto.ErrCode]int) // 错误码/错误个数
 	)
 
+	// 定时输出一次计算结果
+	ticker := time.NewTicker(1*time.Second)
+
+	go func() {
+			select {
+			case <-ticker.C:
+				go calculateData(uint64(len(csvSlice)), processingTime,maxTime, minTime, successNum, failureNum, errCode)
+				ticker.Stop()
+			}
+	}()
+
 	header()
+
+	close(ch)
 
 	for data := range ch {
 		processingTime = processingTime + data.Time
@@ -47,14 +61,11 @@ func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults) 
 		}
 	}
 
-	<-ch
-
-	calculateData(uint64(len(csvSlice)), processingTime, maxTime, minTime, successNum, failureNum, errCode)
+	//calculateData(uint64(len(csvSlice)), processingTime, maxTime, minTime, successNum, failureNum, errCode)
 }
 
 // 打印表头信息
 func header() {
-	fmt.Printf("\n\n")
 	// 打印的时长都为毫秒 总请数
 	fmt.Println("───────┬───────┬───────┬────────┬────────┬────────┬────────┬────────")
 	result := fmt.Sprintf(" 并发数│ 成功数│ 失败数│   qps  │最长耗时│最短耗时│平均耗时│ 错误码")
@@ -94,8 +105,6 @@ func calculateData(concurrent, processingTime, maxTime, minTime, successNum, fai
 	minTimeFloat = float64(minTime) / 1e6
 
 	// 打印的时长都为毫秒
-	// result := fmt.Sprintf("请求总数:%8d|successNum:%8d|failureNum:%8d|qps:%9.3f|maxTime:%9.3f|minTime:%9.3f|平均时长:%9.3f|errCode:%v", successNum+failureNum, successNum, failureNum, qps, maxTimeFloat, minTimeFloat, averageTime, errCode)
-	// fmt.Println(result)
 	table(successNum, failureNum, errCode, qps, averageTime, maxTimeFloat, minTimeFloat, concurrent)
 }
 
