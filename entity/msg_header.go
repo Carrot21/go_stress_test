@@ -33,15 +33,9 @@ type UserInfo struct {
 	VersionCode string
 	SessionId	[12]byte
 }
-//
-//type Person struct {
-//	//UserId string `xml:"user_id"`
-//	UserId string `xml:"id"`
-//	LoginToken string `xml:"last_login_token"`
-//	DeviceToken string `xml:"device_token"`
-//	VoipToken string `xml:"voip_token"`
-//	Push_token string `xml:"push_token"`
-//	ChannelType uint32 `xml:"channel_type"`
-//	VersionCode string
-//	SessionId	[12]byte
-//}
+
+type ResponseResults struct {
+	Time      uint64 // 请求时间 纳秒
+	IsSucceed bool   // 是否请求成功
+	ErrCode   int    // 错误码
+}

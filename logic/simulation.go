@@ -2,13 +2,13 @@ package logic
 
 import (
 	"encoding/binary"
+	"github.com/cihub/seelog"
 	"github.com/golang/protobuf/proto"
 	"go_stress_test/config"
 	"go_stress_test/entity"
 	msgcmdproto "go_stress_test/proto"
 	"go_stress_test/util"
 	"golang.org/x/sync/errgroup"
-	"log"
 	"net"
 	"os"
 	"sync"
@@ -19,11 +19,11 @@ func ConnTCPserver() net.Conn {
 	conn, err := net.DialTimeout("tcp", config.GetConfig().HostPort,
 		time.Duration(config.GetConfig().DialTimeout)*time.Second)
 	if err != nil {
-		log.Fatalln("Fatal error:", err.Error())
+		seelog.Error("Fatal error:", err.Error())
 		os.Exit(1)
 	}
 
-	log.Println(conn.RemoteAddr().String(), "connection succcess!")
+	//seelog.Info(conn.RemoteAddr().String(), " connection succcess!")
 
 	return conn
 }
@@ -57,11 +57,11 @@ func SimulateLogin(csvSlice [][]string) {
 				SVersionCode: "2.3.0",         // string
 			}
 
-			log.Println(msgBody)
+			seelog.Info(msgBody)
 			// 对数据进行序列化
 			msgBodyProto, err := proto.Marshal(&msgBody)
 			if err != nil {
-				log.Fatalln("Mashal data error:", err)
+				seelog.Error("Mashal data error:", err)
 			}
 
 			msgHead.NBodySize = uint16(len(msgBodyProto))
@@ -70,29 +70,31 @@ func SimulateLogin(csvSlice [][]string) {
 			sendData = append(sendData, msgBodyProto...)
 
 			//conn := conns[i]
-			conn.Write(sendData)
+			if _, err := conn.Write(sendData); err != nil {
+				seelog.Error("Write CM Server Failed:", err)
+			}
 
 			//read ack data
 			recvData := make([]byte, 1024)
 			reqLen, err := conn.Read(recvData)
 			if err != nil {
-				log.Println("Error to read message", err.Error())
+				seelog.Info("Error to read message", err.Error())
 			}
 
-			log.Printf("Recv data from %s, data len = %d", conn.RemoteAddr(), reqLen)
+			seelog.Infof("Recv data from %s, data len = %d", conn.RemoteAddr(), reqLen)
 
 			loginAck := msgcmdproto.CMLoginV1Ack{}
 
 			proto.Unmarshal(recvData[20:], &loginAck)
 
 			if loginAck.NErr != msgcmdproto.ErrCode_NON_ERR {
-				log.Printf("user %s login error , errorcode = %d\n", loginAck.GetSUserId(), loginAck.GetNErr())
+				seelog.Infof("user %s login error , errorcode = %d\n", loginAck.GetSUserId(), loginAck.GetNErr())
 			}
 
 			//copy(result.Person[i].SessionId[:], recvData[3:15])
-			log.Printf("user %s login at %d , status = %d\n",
+			seelog.Infof("user %s login at %d , status = %d\n",
 				loginAck.GetSUserId(), loginAck.GetNLastLoginTime(), loginAck.GetNErr())
-			//log.Println("sessionid: ", result.Person[i].SessionId)
+			//seelog.Info("sessionid: ", result.Person[i].SessionId)
 			//conns = append(conns, conn)
 		}(i)
 	}
@@ -123,11 +125,11 @@ func SimulateHeartBeat(csvSlice [][]string) {
 			//conn := conns[i]
 			wLen, err := conn.Write(sendData)
 			if err != nil {
-				log.Println("Write Data Error: ", error(err))
+				seelog.Info("Write Data Error: ", error(err))
 				return err
 			}
 
-			log.Printf("Write data to %s, len = %d\n", conn.RemoteAddr(), wLen)
+			seelog.Infof("Write data to %s, len = %d\n", conn.RemoteAddr(), wLen)
 
 			time.Sleep(time.Duration(config.GetConfig().HeartBeat) * time.Second)
 
@@ -136,6 +138,6 @@ func SimulateHeartBeat(csvSlice [][]string) {
 	}
 
 	if err := g.Wait(); err != nil {
-		log.Fatalln("Err:", err)
+		seelog.Error("Err:", err)
 	}
 }

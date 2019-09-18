@@ -3,8 +3,8 @@ package util
 import (
 	"encoding/json"
 	"encoding/xml"
+	"github.com/cihub/seelog"
 	"io/ioutil"
-	"log"
 	"path"
 )
 
@@ -27,20 +27,20 @@ type Person struct {
 func GetUserInfoFromFile(result *Result, filename string) error {
 	conntent , err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Fatal(err)
+		seelog.Error(err)
 	}
 	extent := path.Ext(filename)
-	log.Println("Extent file name : ", extent)
+	seelog.Info("Extent file name : ", extent)
 	if extent == ".xml" {
 		err = xml.Unmarshal(conntent, result)
 	} else if extent == ".json" {
 		err = json.Unmarshal(conntent, result)
 	} else {
-		log.Println("Unknow file type")
+		seelog.Info("Unknow file type")
 	}
 
 	if err != nil {
-		log.Fatal(err)
+		seelog.Error(err)
 	}
 
 	return err

@@ -2,8 +2,8 @@ package logic
 
 import (
 	"encoding/csv"
+	"github.com/cihub/seelog"
 	"io/ioutil"
-	"log"
 	"strings"
 )
 
@@ -16,7 +16,7 @@ func ParseCSVFile(fileName string) [][]string {
 	r2 := csv.NewReader(strings.NewReader(string(cntb)))
 	ss, err := r2.ReadAll()
 	if err != nil {
-		log.Fatalln("ParseCSVFile Err:", err)
+		seelog.Error("ParseCSVFile Err:", err)
 
 		return nil
 	}

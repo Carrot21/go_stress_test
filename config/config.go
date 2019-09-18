@@ -1,9 +1,9 @@
 package config
 
 import (
+	"github.com/cihub/seelog"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"log"
 	"os"
 )
 
@@ -18,7 +18,7 @@ type config struct {
 func LoadConfig(filename string) (conf *config) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Fatalln(err)
+		seelog.Error(err)
 		return nil
 	}
 
@@ -27,19 +27,19 @@ func LoadConfig(filename string) (conf *config) {
 
 	// Decoding config
 	if err = yaml.UnmarshalStrict(data, &conf); err != nil {
-		log.Fatalln(err)
+		seelog.Error(err)
 		return nil
 	}
 
 	g_config = conf
 
-	log.Printf("LoadConfig: %v", *conf)
+	seelog.Infof("LoadConfig: %v", *conf)
 	return
 }
 
 func GetConfig() *config {
 	if g_config == nil {
-		log.Fatalln("CONFIG FILE IS NULL!")
+		seelog.Error("CONFIG FILE IS NULL!")
 	}
 	return g_config
 }

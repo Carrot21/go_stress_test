@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/cihub/seelog"
 	"go_stress_test/config"
 	"go_stress_test/logic"
 	"log"
@@ -13,6 +14,8 @@ var (
 )
 
 func main() {
+	InitLog()
+
 	flag.Parse()
 
 	if *csvFile == "" {
@@ -33,4 +36,18 @@ func main() {
 	//case <-time.After(10 * time.Second):
 	//	log.Println("send over")
 	//}
+}
+
+func InitLog(){
+	defer seelog.Flush()
+
+	//加载配置文件
+	logger, err := seelog.LoggerFromConfigAsFile("config/log_config.xml")
+
+	if err!=nil{
+		panic("parse log_config.xml error")
+	}
+
+	//替换记录器
+	seelog.ReplaceLogger(logger)
 }

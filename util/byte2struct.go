@@ -1,7 +1,7 @@
 package util
 
 import (
-	"fmt"
+	"github.com/cihub/seelog"
 	"go_stress_test/entity"
 	"unsafe"
 )
@@ -25,8 +25,8 @@ func Struct2Byte(srcStruct *TestStructTobytes) []byte{
 		len:  int(Len),
 	}
 	data := *(*[]byte)(unsafe.Pointer(testBytes))
-	fmt.Println("srcStruct len : ", Len)
-	fmt.Println("[]byte is : ", data)
+	seelog.Info("srcStruct len : ", Len)
+	seelog.Info("[]byte is : ", data)
 
 	return data
 }
