@@ -8,7 +8,6 @@ import (
 	"go_stress_test/entity"
 	msgcmdproto "go_stress_test/proto"
 	"go_stress_test/util"
-	"golang.org/x/sync/errgroup"
 	"net"
 	"os"
 	"sync"
@@ -134,40 +133,44 @@ func DiffNano(startTime time.Time) (diff int64) {
 
 //发心跳包的
 func SimulateHeartBeat(csvSlice [][]string) {
-	var g errgroup.Group
+	var wg sync.WaitGroup
 
 	for i := 0; i < len(csvSlice); i++ {
-		g.Go(func() error {
-			conn := ConnTCPserver()
+		wg.Add(1)
+		n := 0
+		go func() {
+			defer wg.Done()
 
-			data := []byte{'U', 'S'}
+			for {
 
-			msgHead := &entity.Header{
-				NPID:      binary.LittleEndian.Uint16(data),
-				NVersion:  2,
-				SessionId: [12]byte{},
-				BEncrypt:  0,
-				NCmdId:    0xa001,
-				NBodySize: 0,
+				conn := ConnTCPserver()
+
+				data := []byte{'U', 'S'}
+
+				msgHead := &entity.Header{
+					NPID:      binary.LittleEndian.Uint16(data),
+					NVersion:  2,
+					SessionId: [12]byte{},
+					BEncrypt:  0,
+					NCmdId:    0xa001,
+					NBodySize: 0,
+				}
+				// 对数据进行序列化
+				sendData := util.StructToByte(msgHead)
+				//conn := conns[i]
+				wLen, err := conn.Write(sendData)
+				if err != nil {
+					seelog.Info("Write Data Error: ", error(err))
+				}
+
+				seelog.Infof("Write data to %s, len = %d\n", conn.RemoteAddr(), wLen)
+
+				time.Sleep(time.Duration(config.GetConfig().HeartBeat) * time.Second)
+				n++
+				println(n)
 			}
-			// 对数据进行序列化
-			sendData := util.StructToByte(msgHead)
-			//conn := conns[i]
-			wLen, err := conn.Write(sendData)
-			if err != nil {
-				seelog.Info("Write Data Error: ", error(err))
-				return err
-			}
-
-			seelog.Infof("Write data to %s, len = %d\n", conn.RemoteAddr(), wLen)
-
-			time.Sleep(time.Duration(config.GetConfig().HeartBeat) * time.Second)
-
-			return nil
-		})
+		}()
 	}
 
-	if err := g.Wait(); err != nil {
-		seelog.Error("Err:", err)
-	}
+	wg.Wait()
 }

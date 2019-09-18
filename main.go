@@ -7,6 +7,7 @@ import (
 	"go_stress_test/entity"
 	"go_stress_test/logic"
 	"log"
+	"time"
 )
 
 var (
@@ -39,10 +40,10 @@ func main() {
 	//发心跳包的
 	logic.SimulateHeartBeat(csvSlice)
 
-	//select {
-	//case <-time.After(10 * time.Second):
-	//	log.Println("send over")
-	//}
+	select {
+	case <-time.After(10 * time.Second):
+		log.Println("所有用户都已退出！")
+	}
 }
 
 func InitLog() {
