@@ -177,7 +177,7 @@ func sendHeartBeat(conn net.Conn) {
 		seelog.Info("Write Data Error: ", error(err))
 	}
 
-	seelog.Infof("Write data to %s, len = %d\n", conn.RemoteAddr(), wLen)
+	seelog.Infof("Send HeartBeat to %s, len = %d\n", conn.RemoteAddr(), wLen)
 
 	time.Sleep(time.Duration(config.GetConfig().HeartBeat) * time.Second)
 

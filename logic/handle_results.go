@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults, isGenFile bool) {
+func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults, isGenFile bool, onLineTime int) {
 	var (
 		processingTime uint64 // 处理总时间
 		maxTime        uint64 // 最大时长
@@ -25,7 +25,7 @@ func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults, 
 	go func() {
 		select {
 		case <-ticker.C:
-			go calculateData(uint64(len(csvSlice)), processingTime, maxTime, minTime, successNum, failureNum, isGenFile)
+			go calculateData(uint64(len(csvSlice)), processingTime, maxTime, minTime, successNum, failureNum, isGenFile, onLineTime)
 			ticker.Stop()
 		}
 	}()
@@ -61,7 +61,7 @@ func header() {
 	// 打印的时长都为毫秒
 	println("  		开始压测，请耐心等待见证奇迹的时刻！")
 	fmt.Println("───────┬───────┬───────┬────────┬────────┬────────┬────────┬────────")
-	result := fmt.Sprintf(" 并发数│ 成功数│ 失败数│   QPS  │最长耗时│最短耗时│平均耗时│总耗时")
+	result := fmt.Sprintf(" 并发数│ 成功数│ 失败数│   QPS  │最长耗时│最短耗时│平均耗时│  总耗时")
 	fmt.Println(result)
 	fmt.Println("───────┼───────┼───────┼────────┼────────┼────────┼────────┼────────")
 
@@ -69,7 +69,7 @@ func header() {
 }
 
 // 计算数据
-func calculateData(concurrent, processingTime, maxTime, minTime, successNum, failureNum uint64, isGenFile bool) {
+func calculateData(concurrent, processingTime, maxTime, minTime, successNum, failureNum uint64, isGenFile bool, onLineTime int) {
 	if processingTime == 0 {
 		processingTime = 1
 	}
@@ -104,6 +104,8 @@ func calculateData(concurrent, processingTime, maxTime, minTime, successNum, fai
 	if isGenFile {
 		generateCSVFile(successNum, failureNum, qps, averageTime, maxTimeFloat, minTimeFloat, processingTimeNa, concurrent)
 	}
+
+	fmt.Printf("\n  		模拟用户在线时长为%d分钟，请耐心等待...\n", onLineTime)
 }
 
 // 打印表格
