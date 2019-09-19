@@ -20,8 +20,8 @@ var (
 func main() {
 	InitLog()
 
-	ch := make(chan *entity.ResponseResults, 10000)
-	connChan := make(chan *entity.UserConnInfo, 10000)
+	ch := make(chan *entity.ResponseResults, 100000)
+	connChan := make(chan *entity.UserConnInfo, 100000)
 
 	flag.Parse()
 

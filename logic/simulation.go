@@ -54,8 +54,6 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connC
 				SVersionCode: "2.3.0",
 			}
 
-			seelog.Info(msgBody)
-			// 对数据进行序列化
 			msgBodyProto, err := proto.Marshal(&msgBody)
 			if err != nil {
 				seelog.Error("Mashal data error:", err)
@@ -91,22 +89,21 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connC
 
 			seelog.Infof("Recv data from %s, data len = %d, ConnID: %d, UserID: %s", conn.RemoteAddr(), reqLen, i, csvSlice[i][0])
 
-			loginAck := msgcmdproto.CMLoginV1Ack{}
-
-			proto.Unmarshal(recvData[20:], &loginAck)
-
-			if loginAck.NErr != msgcmdproto.ErrCode_NON_ERR {
-				seelog.Infof("ConnID: %d, user %s login error , errorcode = %d", i, loginAck.GetSUserId(), loginAck.GetNErr())
-			}
-
-			seelog.Infof("ConnID: %d, user %s login at %d , status = %d",
-				i, loginAck.GetSUserId(), loginAck.GetNLastLoginTime(), loginAck.GetNErr())
+			//loginAck := msgcmdproto.CMLoginV1Ack{}
+			//
+			//proto.Unmarshal(recvData[20:], &loginAck)
+			//
+			//if loginAck.NErr != msgcmdproto.ErrCode_NON_ERR {
+			//	seelog.Infof("ConnID: %d, user %s login error , errorcode = %d", i, loginAck.GetSUserId(), loginAck.GetNErr())
+			//}
+			//
+			//seelog.Infof("ConnID: %d, user %s login at %d , status = %d",
+			//	i, loginAck.GetSUserId(), loginAck.GetNLastLoginTime(), loginAck.GetNErr())
 
 			responseResults := &entity.ResponseResults{
 				Time:      spentTime,
 				IsSucceed: isSucceed,
 			}
-
 			ch <- responseResults
 
 			userConnInfo := &entity.UserConnInfo{
@@ -115,7 +112,6 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connC
 				UserID: csvSlice[i][0],
 			}
 			connChan <- userConnInfo
-
 		}(i, ch, connChan)
 	}
 
