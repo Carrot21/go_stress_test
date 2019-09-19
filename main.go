@@ -35,6 +35,8 @@ func main() {
 
 	csvSlice := logic.ParseCSVFile(*csvFile)
 
+	println("  		开始压测，请耐心等待见证奇迹的时刻！")
+
 	logic.SimulateLogin(csvSlice, ch, connChan)
 
 	logic.HandleReponseResults(csvSlice, ch, *IsGenerateFile, *onLineTime)

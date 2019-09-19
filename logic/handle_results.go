@@ -59,7 +59,6 @@ func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults, 
 // 打印表头信息
 func header() {
 	// 打印的时长都为毫秒
-	println("  		开始压测，请耐心等待见证奇迹的时刻！")
 	fmt.Println("───────┬───────┬───────┬────────┬────────┬────────┬────────┬────────")
 	result := fmt.Sprintf(" 并发数│ 成功数│ 失败数│   QPS  │最长耗时│最短耗时│平均耗时│  总耗时")
 	fmt.Println(result)

@@ -18,7 +18,7 @@ func ConnTCPserver() net.Conn {
 	conn, err := net.DialTimeout("tcp", config.GetConfig().HostPort,
 		time.Duration(config.GetConfig().DialTimeout)*time.Second)
 	if err != nil {
-		seelog.Error("Fatal error:", err.Error())
+		seelog.Error("ConnectTCPServer TimeOut error:", err.Error())
 		os.Exit(1)
 	}
 
