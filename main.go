@@ -21,6 +21,7 @@ func main() {
 	InitLog()
 
 	ch := make(chan *entity.ResponseResults, 10000)
+	connChan := make(chan *entity.UserConnInfo, 10000)
 
 	flag.Parse()
 
@@ -34,12 +35,12 @@ func main() {
 
 	csvSlice := logic.ParseCSVFile(*csvFile)
 
-	logic.SimulateLogin(csvSlice, ch)
+	logic.SimulateLogin(csvSlice, ch, connChan)
 
 	logic.HandleReponseResults(csvSlice, ch, *IsGenerateFile, *onLineTime)
 
 	//发心跳包的
-	logic.SimulateHeartBeat(csvSlice, *onLineTime)
+	logic.SimulateHeartBeat(*onLineTime, connChan)
 
 	fmt.Println("  		所有用户都已经成功退出！")
 }

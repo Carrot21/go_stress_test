@@ -25,17 +25,16 @@ func ConnTCPserver() net.Conn {
 	return conn
 }
 
-func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults) {
+func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connChan chan<- *entity.UserConnInfo) {
 	var wg sync.WaitGroup
 
 	for i := 0; i < len(csvSlice); i++ {
 		wg.Add(1)
 
-		go func(i int, ch chan<- *entity.ResponseResults) {
+		go func(i int, ch chan<- *entity.ResponseResults, connChan chan<- *entity.UserConnInfo) {
 			conn := ConnTCPserver()
 
 			defer wg.Done()
-			defer conn.Close()
 
 			msgHead := &entity.Header{
 				NPID:      binary.LittleEndian.Uint16([]byte{'U', 'S'}),
@@ -75,7 +74,7 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults) {
 			if _, err := conn.Write(sendData); err != nil {
 				isSucceed = false
 
-				seelog.Error("Write CM Server Failed:", err)
+				seelog.Errorf("Write CM Server Failed: %s, ConnID: %d", err, i)
 			}
 
 			//read ack data
@@ -87,21 +86,21 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults) {
 			if err != nil {
 				isSucceed = false
 
-				seelog.Info("Error to read message", err.Error())
+				seelog.Infof("Error to read message: %s, ConnID: %d, UserID: %s", err.Error(), i, csvSlice[i][0])
 			}
 
-			seelog.Infof("Recv data from %s, data len = %d", conn.RemoteAddr(), reqLen)
+			seelog.Infof("Recv data from %s, data len = %d, ConnID: %d, UserID: %s", conn.RemoteAddr(), reqLen, i, csvSlice[i][0])
 
 			loginAck := msgcmdproto.CMLoginV1Ack{}
 
 			proto.Unmarshal(recvData[20:], &loginAck)
 
 			if loginAck.NErr != msgcmdproto.ErrCode_NON_ERR {
-				seelog.Infof("user %s login error , errorcode = %d\n", loginAck.GetSUserId(), loginAck.GetNErr())
+				seelog.Infof("ConnID: %d, user %s login error , errorcode = %d", i, loginAck.GetSUserId(), loginAck.GetNErr())
 			}
 
-			seelog.Infof("user %s login at %d , status = %d\n",
-				loginAck.GetSUserId(), loginAck.GetNLastLoginTime(), loginAck.GetNErr())
+			seelog.Infof("ConnID: %d, user %s login at %d , status = %d",
+				i, loginAck.GetSUserId(), loginAck.GetNLastLoginTime(), loginAck.GetNErr())
 
 			responseResults := &entity.ResponseResults{
 				Time:      spentTime,
@@ -109,7 +108,15 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults) {
 			}
 
 			ch <- responseResults
-		}(i, ch)
+
+			userConnInfo := &entity.UserConnInfo{
+				ConnID: i,
+				Conn:   conn,
+				UserID: csvSlice[i][0],
+			}
+			connChan <- userConnInfo
+
+		}(i, ch, connChan)
 	}
 
 	wg.Wait()
@@ -127,29 +134,29 @@ func DiffNano(startTime time.Time) (diff int64) {
 }
 
 //发心跳包的
-func SimulateHeartBeat(csvSlice [][]string, onLineTime int) {
+func SimulateHeartBeat(onLineTime int, connChan chan *entity.UserConnInfo) {
 	var wg sync.WaitGroup
 
-	for i := 0; i < len(csvSlice); i++ {
+	close(connChan)
+
+	for connInfo := range connChan {
 		wg.Add(1)
-		go func() {
-			conn := ConnTCPserver()
+		go func(connInfo *entity.UserConnInfo) {
 
 			defer wg.Done()
-			defer conn.Close()
+			defer connInfo.Conn.Close()
 
 			ticker := time.NewTicker(time.Duration(onLineTime) * time.Minute)
-
 			for {
 				select {
 				case <-ticker.C:
 					ticker.Stop()
 					return
 				default:
-					sendHeartBeat(conn)
+					sendHeartBeat(connInfo)
 				}
 			}
-		}()
+		}(connInfo)
 	}
 
 	wg.Wait()
@@ -157,7 +164,7 @@ func SimulateHeartBeat(csvSlice [][]string, onLineTime int) {
 
 //var n uint32
 
-func sendHeartBeat(conn net.Conn) {
+func sendHeartBeat(connInfo *entity.UserConnInfo) {
 	data := []byte{'U', 'S'}
 
 	msgHead := &entity.Header{
@@ -172,12 +179,12 @@ func sendHeartBeat(conn net.Conn) {
 	// 对数据进行序列化
 	sendData := util.StructToByte(msgHead)
 
-	wLen, err := conn.Write(sendData)
+	wLen, err := connInfo.Conn.Write(sendData)
 	if err != nil {
-		seelog.Info("Write Data Error: ", error(err))
+		seelog.Infof("ConnID:%d, UserID:%s Send HeartBeat Error: %s", error(err), connInfo.ConnID, connInfo.UserID)
 	}
 
-	seelog.Infof("Send HeartBeat to %s, len = %d\n", conn.RemoteAddr(), wLen)
+	seelog.Infof("ConnID:%d, UserID:%s Send HeartBeat to %s, len = %d", connInfo.ConnID, connInfo.UserID, connInfo.Conn.RemoteAddr(), wLen)
 
 	time.Sleep(time.Duration(config.GetConfig().HeartBeat) * time.Second)
 
