@@ -85,9 +85,9 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connC
 				isSucceed = false
 
 				seelog.Infof("Error to read message: %s, ConnID: %d, UserID: %s", err.Error(), i, csvSlice[i][0])
+			} else {
+				seelog.Infof("Recv data from %s, data len = %d, ConnID: %d, UserID: %s", conn.RemoteAddr(), reqLen, i, csvSlice[i][0])
 			}
-
-			seelog.Infof("Recv data from %s, data len = %d, ConnID: %d, UserID: %s", conn.RemoteAddr(), reqLen, i, csvSlice[i][0])
 
 			//loginAck := msgcmdproto.CMLoginV1Ack{}
 			//
