@@ -8,6 +8,7 @@ import (
 	"go_stress_test/entity"
 	"go_stress_test/logic"
 	"log"
+	"time"
 )
 
 var (
@@ -41,10 +42,11 @@ func main() {
 
 	logic.HandleReponseResults(csvSlice, ch, *IsGenerateFile, *onLineTime)
 
+	time.Sleep(10*time.Second)
 	//发心跳包的
-	logic.SimulateHeartBeat(*onLineTime, connChan)
+	//logic.SimulateHeartBeat(*onLineTime, connChan)
 
-	fmt.Println("  		所有用户都已经成功退出！")
+	fmt.Println("  		所有用户登录完成，压测结束！")
 }
 
 func InitLog() {

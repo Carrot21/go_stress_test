@@ -28,8 +28,11 @@ func ConnTCPserver() net.Conn {
 func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connChan chan<- *entity.UserConnInfo) {
 	var wg sync.WaitGroup
 
+	count := 0
 	for i := 0; i < len(csvSlice); i++ {
 		wg.Add(1)
+
+		count++
 
 		go func(i int, ch chan<- *entity.ResponseResults, connChan chan<- *entity.UserConnInfo) {
 			conn := ConnTCPserver()
@@ -81,24 +84,33 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connC
 
 			spentTime := uint64(DiffNano(startTime))
 
+			isGetServerRsp := true
+
 			if err != nil {
 				isSucceed = false
 
-				seelog.Infof("Error to read message: %s, ConnID: %d, UserID: %s", err.Error(), i, csvSlice[i][0])
+				seelog.Infof("Read ServerResponseMessage Error: %s, ConnID: %d, UserID: %s", err.Error(), i, csvSlice[i][0])
+				isGetServerRsp = false
 			} else {
 				seelog.Infof("Recv data from %s, data len = %d, ConnID: %d, UserID: %s", conn.RemoteAddr(), reqLen, i, csvSlice[i][0])
 			}
 
-			//loginAck := msgcmdproto.CMLoginV1Ack{}
-			//
-			//proto.Unmarshal(recvData[20:], &loginAck)
-			//
-			//if loginAck.NErr != msgcmdproto.ErrCode_NON_ERR {
-			//	seelog.Infof("ConnID: %d, user %s login error , errorcode = %d", i, loginAck.GetSUserId(), loginAck.GetNErr())
-			//}
-			//
-			//seelog.Infof("ConnID: %d, user %s login at %d , status = %d",
-			//	i, loginAck.GetSUserId(), loginAck.GetNLastLoginTime(), loginAck.GetNErr())
+			if isGetServerRsp {
+				go func() {
+					for {
+						Data := util.StructToByte(msgHead)
+
+						wLen, err := conn.Write(Data)
+						if err != nil {
+							seelog.Infof("@ConnID:%d, UserID:%s Send HeartBeat Error: %s", i, csvSlice[i][0], err)
+						} else {
+							seelog.Infof("@ConnID:%d, UserID:%s Send HeartBeat to %s, len = %d", i, csvSlice[i][0], conn.RemoteAddr(), wLen)
+						}
+
+						time.Sleep(2 * time.Second)
+					}
+				}()
+			}
 
 			responseResults := &entity.ResponseResults{
 				Time:      spentTime,
@@ -113,6 +125,11 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connC
 			}
 			connChan <- userConnInfo
 		}(i, ch, connChan)
+
+		if count > 1000 {
+			time.Sleep(10 * time.Second)
+			count = 0
+		}
 	}
 
 	wg.Wait()
@@ -177,10 +194,10 @@ func sendHeartBeat(connInfo *entity.UserConnInfo) {
 
 	wLen, err := connInfo.Conn.Write(sendData)
 	if err != nil {
-		seelog.Infof("ConnID:%d, UserID:%s Send HeartBeat Error: %s", error(err), connInfo.ConnID, connInfo.UserID)
+		seelog.Infof("ConnID:%d, UserID:%s Send HeartBeat Error: %s", connInfo.ConnID, connInfo.UserID, err)
+	} else {
+		seelog.Infof("ConnID:%d, UserID:%s Send HeartBeat to %s, len = %d", connInfo.ConnID, connInfo.UserID, connInfo.Conn.RemoteAddr(), wLen)
 	}
-
-	seelog.Infof("ConnID:%d, UserID:%s Send HeartBeat to %s, len = %d", connInfo.ConnID, connInfo.UserID, connInfo.Conn.RemoteAddr(), wLen)
 
 	time.Sleep(time.Duration(config.GetConfig().HeartBeat) * time.Second)
 

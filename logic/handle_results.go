@@ -104,7 +104,7 @@ func calculateData(concurrent, processingTime, maxTime, minTime, successNum, fai
 		generateCSVFile(successNum, failureNum, qps, averageTime, maxTimeFloat, minTimeFloat, processingTimeNa, concurrent)
 	}
 
-	fmt.Printf("\n  		模拟用户在线时长为%d分钟，请耐心等待...\n", onLineTime)
+	//fmt.Printf("\n  		模拟用户在线时长为%d分钟，请耐心等待...\n", onLineTime)
 }
 
 // 打印表格
