@@ -39,8 +39,6 @@ func main() {
 
 	logic.HandleReponseResults(csvSlice, ch, *IsGenerateFile)
 
-	println("用户保持正常在线,退出请按ctrl+c")
-
 	select {
 	}
 
