@@ -2,6 +2,7 @@ package logic
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/cihub/seelog"
 	"github.com/golang/protobuf/proto"
 	"go_stress_test/config"
@@ -95,10 +96,27 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connC
 				seelog.Infof("Recv data from %s, data len = %d, ConnID: %d, UserID: %s", conn.RemoteAddr(), reqLen, i, csvSlice[i][0])
 			}
 
+			loginAck := msgcmdproto.CMLoginV1Ack{}
+			proto.Unmarshal(recvData[20:], &loginAck)
+			if loginAck.NErr != msgcmdproto.ErrCode_NON_ERR {
+				seelog.Infof("user %s login error , errorcode = %d\n", loginAck.GetSUserId(), loginAck.GetNErr())
+				isGetServerRsp = false
+				isSucceed = false
+			}
+
 			if isGetServerRsp {
 				go func() {
 					for {
-						Data := util.StructToByte(msgHead)
+						msgHead1 := &entity.Header{
+							NPID:      binary.LittleEndian.Uint16([]byte{'U', 'S'}),
+							NVersion:  2,
+							SessionId: [12]byte{},
+							BEncrypt:  0,
+							NCmdId:    0x3001,
+							NBodySize: 0,
+						}
+
+						Data := util.StructToByte(msgHead1)
 
 						wLen, err := conn.Write(Data)
 						if err != nil {
@@ -108,6 +126,19 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connC
 						}
 
 						time.Sleep(2 * time.Second)
+					}
+				}()
+
+				go func() {
+					recvData := make([]byte, 1024*8)
+					for {
+						reqLen, err := conn.Read(recvData)
+						if err != nil {
+							fmt.Println("HeartBeat Error to read message", err.Error())
+							return
+						}
+
+						seelog.Infof("Recv HeartBeat data from %s-%s, data len = %d", conn.LocalAddr(), conn.RemoteAddr(), reqLen)
 					}
 				}()
 			}
