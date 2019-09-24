@@ -12,7 +12,6 @@ import (
 var (
 	confFile       = flag.String("confFile", "config/go_stress_test.yml", "配置文件，不要添加在命令行上，使用默认即可")
 	csvFile        = flag.String("csvFile", "", "请输入csv格式的文件，如./go_stress_test -csvFile=xxx.csv")
-	onLineTime     = flag.Int("time", 1, "模拟用户在线时长，单位为分钟，默认1分钟")
 	IsGenerateFile = flag.Bool("genFile", false, "若要生成压力测试文件，则在命令行上添加-genFile=true，默认不生成")
 )
 
@@ -20,7 +19,7 @@ func main() {
 	InitLog()
 
 	ch := make(chan *entity.ResponseResults, 100000)
-	connChan := make(chan *entity.UserConnInfo, 100000)
+	//connChan := make(chan *entity.UserConnInfo, 100000)
 
 	flag.Parse()
 
@@ -36,14 +35,17 @@ func main() {
 
 	println("  		开始压测，请耐心等待见证奇迹的时刻！")
 
-	logic.SimulateLogin(csvSlice, ch, connChan)
+	logic.SimulateLogin(csvSlice, ch/*, connChan*/)
 
-	logic.HandleReponseResults(csvSlice, ch, *IsGenerateFile, *onLineTime)
+	logic.HandleReponseResults(csvSlice, ch, *IsGenerateFile)
+
+	println("用户保持正常在线,退出请按ctrl+c")
 
 	select {
 	}
+
 	//time.Sleep(10*time.Second)
-	//发心跳包的
+	//之前写单独发心跳包的，现在不用了，但不要去掉，以后可能会用！
 	//logic.SimulateHeartBeat(*onLineTime, connChan)
 
 	//fmt.Println("  		所有用户登录完成，压测结束！")

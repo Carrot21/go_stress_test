@@ -1,4 +1,4 @@
 #hostport: 40.90.188.236:1800
 hostport: 192.168.2.91:1800
 dialtimeout: 10
-heartbeat: 10
+heartbeat: 2

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults, isGenFile bool, onLineTime int) {
+func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults, isGenFile bool) {
 	var (
 		processingTime uint64 // 处理总时间
 		maxTime        uint64 // 最大时长
@@ -25,7 +25,7 @@ func HandleReponseResults(csvSlice [][]string, ch chan *entity.ResponseResults, 
 	go func() {
 		select {
 		case <-ticker.C:
-			go calculateData(uint64(len(csvSlice)), processingTime, maxTime, minTime, successNum, failureNum, isGenFile, onLineTime)
+			go calculateData(uint64(len(csvSlice)), processingTime, maxTime, minTime, successNum, failureNum, isGenFile)
 			ticker.Stop()
 		}
 	}()
@@ -68,7 +68,7 @@ func header() {
 }
 
 // 计算数据
-func calculateData(concurrent, processingTime, maxTime, minTime, successNum, failureNum uint64, isGenFile bool, onLineTime int) {
+func calculateData(concurrent, processingTime, maxTime, minTime, successNum, failureNum uint64, isGenFile bool) {
 	if processingTime == 0 {
 		processingTime = 1
 	}

@@ -26,7 +26,7 @@ func ConnTCPserver() net.Conn {
 	return conn
 }
 
-func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connChan chan<- *entity.UserConnInfo) {
+func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults/*, connChan chan<- *entity.UserConnInfo*/) {
 	var wg sync.WaitGroup
 
 	count := 0
@@ -35,7 +35,7 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connC
 
 		count++
 
-		go func(i int, ch chan<- *entity.ResponseResults, connChan chan<- *entity.UserConnInfo) {
+		go func(i int) {
 			conn := ConnTCPserver()
 
 			defer wg.Done()
@@ -125,7 +125,7 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connC
 							seelog.Infof("@ConnID:%d, UserID:%s Send HeartBeat to %s, len = %d", i, csvSlice[i][0], conn.RemoteAddr(), wLen)
 						}
 
-						time.Sleep(2 * time.Second)
+						time.Sleep(time.Duration(config.GetConfig().HeartBeat) * time.Second)
 					}
 				}()
 
@@ -149,13 +149,13 @@ func SimulateLogin(csvSlice [][]string, ch chan<- *entity.ResponseResults, connC
 			}
 			ch <- responseResults
 
-			userConnInfo := &entity.UserConnInfo{
-				ConnID: i,
-				Conn:   conn,
-				UserID: csvSlice[i][0],
-			}
-			connChan <- userConnInfo
-		}(i, ch, connChan)
+			//userConnInfo := &entity.UserConnInfo{
+			//	ConnID: i,
+			//	Conn:   conn,
+			//	UserID: csvSlice[i][0],
+			//}
+			//connChan <- userConnInfo
+		}(i)
 
 		if count > 1000 {
 			time.Sleep(10 * time.Second)
@@ -177,7 +177,7 @@ func DiffNano(startTime time.Time) (diff int64) {
 	return
 }
 
-//发心跳包的
+//之前写单独发心跳包的，现在不用了，但不要去掉，以后可能会用！
 func SimulateHeartBeat(onLineTime int, connChan chan *entity.UserConnInfo) {
 	var wg sync.WaitGroup
 
